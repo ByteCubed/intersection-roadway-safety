@@ -1,0 +1,31 @@
+version: '3'
+services:
+  ug-postgresql:
+    build:
+      context: ../..
+      dockerfile: ./devsecops/local/ug-postgresql/Dockerfile
+    container_name: ug-postgresql
+    env_file:
+      - ./ug-postgresql/env/root.env
+      - ./ug-postgresql/env/read.env
+    image: ug-postgresql
+    networks:
+      - ug-public
+    ports:
+      - 5433:5432
+    volumes:
+      # Use this option to persistently store data in a Docker volume.
+      - ug-postgresql:/var/lib/postgresql/data
+      # Use this option to make data available to the local filesystem.
+      - type: bind
+        source: ../../data/mire/
+        target: /tmp/mire
+      - type: bind
+        source: ../../data/dc/
+        target: /tmp/dc
+
+networks:
+  ug-public:
+
+volumes:
+  ug-postgresql:
