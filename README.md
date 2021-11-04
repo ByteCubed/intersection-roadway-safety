@@ -43,7 +43,7 @@ To stop the services in this template:
 
 ## Section 3: TODOs (Incomplete)
 
-1. Standardize OSM devsecops practices.
+1. Standardize OSM devsecops practices, including deployment documentation.
 2. Incorporate Logstash to accelerate data pipelines.
 3. Develop cloud deployment standards.
 4. Incorporate DVC.

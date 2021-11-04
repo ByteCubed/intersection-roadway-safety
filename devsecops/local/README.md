@@ -1,6 +1,6 @@
 # Department of Transportation: Roadway Safety: Local
 
-This directory creates a local environment for running services for the Department of Transportation's Roadway Safety: Phase II project.
+This directory creates a local environment for running services of the Department of Transportation's Roadway Safety: Phase II project.
 
 ## Section 1: Structure
 
