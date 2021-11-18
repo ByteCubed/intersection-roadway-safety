@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ug-elasticsearch:
+    container_name: ug-elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    env_file:
+      - ./env/root.env
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    networks:
+      - ug-public
+    ports:
+      - 9200:9200
+    volumes:
+      - ug-elasticsearch:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+networks:
+  ug-public:
+
+volumes:
+  ug-elasticsearch:
