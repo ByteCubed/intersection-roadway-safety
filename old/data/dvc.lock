@@ -1,0 +1,66 @@
+make_dc_incident_geojson:
+  cmd: python prepare_incident_geojson.py
+  deps:
+  - path: Crashes_in_DC.csv
+    md5: 5b8a13ebab5db490d9e1562b4a134578
+    size: 120915615
+  - path: prepare_incident_geojson.py
+    md5: 35be00eb5d17a341d2d4cda9096aec13
+    size: 1561
+  outs:
+  - path: dcincidents.json
+    md5: 1f89dff1450e37b28a322ef1910ed675
+    size: 45487217
+make_dc_intersection_graph:
+  cmd: python prepare_osm_graph.py "District of Columbia"
+  deps:
+  - path: prepare_osm_graph.py
+    md5: 10357fcab7ec7bc8560a1e0829321fb8
+    size: 2435
+  outs:
+  - path: DistrictofColumbia.graphml
+    md5: 15164a8ca20b0aeb8d1facfc01286925
+    size: 118555379
+make_dc_intersection_geojson:
+  cmd: python prepare_osm_intersections.py "District of Columbia"
+  deps:
+  - path: DistrictofColumbia.graphml
+    md5: 15164a8ca20b0aeb8d1facfc01286925
+    size: 118555379
+  - path: prepare_osm_intersections.py
+    md5: aea9567d0db0f8675854d5985993618b
+    size: 3492
+  outs:
+  - path: dc_intersections.json
+    md5: 74d66cfdf4b2fc78f47365ed0ea81cf7
+    size: 20531086
+make_dc_intersection_masks:
+  cmd: python prepare_intersection_masks.py "dc_intersections.json" "District of Columbia"
+  deps:
+  - path: dc_intersections.json
+    md5: 1fe4c4659926118c1f7f5a967fd26bcf
+    size: 20531740
+  - path: prepare_intersection_masks.py
+    md5: 36c1b83543de0052b518bdb28e3b5217
+    size: 1075
+  outs:
+  - path: masks
+    md5: 3fea5c869ed80115243e68ea9ea61bde.dir
+    size: 367276114
+    nfiles: 30668
+make_intersection_accidents:
+  cmd: python integration.py
+  deps:
+  - path: US_Accidents_June20.tar
+    md5: 3849e8baac6d8b6cc4dabfc7fc765058
+    size: 1327247360
+  - path: integration.py
+    md5: a8a0dfb55cc4187f2cf648b40060fa86
+    size: 8472
+  outs:
+  - path: intersection_accidents.json
+    md5: 8ad56bb50e5ad4de1e609f3e8f77949d
+    size: 7206382
+  - path: intersection_accidents.pkl
+    md5: 5d11f95f10f5b026fda2627d155ea2ae
+    size: 3855947
