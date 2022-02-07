@@ -1,5 +1,5 @@
 # Using the Postgres 14 base image
-FROM postgres:14
+FROM postgis/postgis:13-master
 
 # Documenting this image's maintainer
 MAINTAINER U.Group

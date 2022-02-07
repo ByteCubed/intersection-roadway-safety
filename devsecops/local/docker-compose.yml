@@ -1,5 +1,21 @@
 version: '3'
 services:
+  ug-osm2pgsql:
+    build:
+      context: ../..
+      dockerfile: ./devsecops/local/ug-osm2pgsql/Dockerfile
+    container_name: ug-osm2pgsql
+    depends_on:
+      - 'ug-postgresql'
+    env_file:
+      - ./ug-osm2pgsql/env/root.env
+    image: ug-osm2pgsql
+    networks:
+      - ug-public
+    volumes:
+      - type: bind
+        source: ../../data/osm/
+        target: /tmp/osm
   ug-postgresql:
     build:
       context: ../..
