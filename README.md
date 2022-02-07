@@ -47,7 +47,7 @@ To stop the services in this template:
 2. Incorporate Logstash to accelerate data pipelines.
 3. Develop cloud deployment standards.
 4. Incorporate DVC.
-5. Incorporate Mapbox data ingestion.
+5. Incorporate existing Mapbox data ingestion processes.
 6. Incorporate extra crash data sources.
 7. Enable data science analyses.
 8. Extend CASSE/visualization capability.

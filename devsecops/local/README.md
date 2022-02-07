@@ -35,14 +35,14 @@ client), use these connection settings:
 
 * **Host**: `localhost`
 * **Port**: `5433`
-* **Database**: `ug`
+* **Database**: `rws`
 * **Username**: `ug_username`
 * **Password**: `ug_password`
 
 To access this service from **other Docker services in this Docker network**, use these connection settings:
 
 * **Host**: `ug-postgresql`
-* **Database**: `ug`
+* **Database**: `rws`
 * **Username**: `ug_username`
 * **Password**: `ug_password`
 
