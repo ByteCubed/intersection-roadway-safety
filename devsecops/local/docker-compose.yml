@@ -39,6 +39,51 @@ services:
       - type: bind
         source: ../../data/dc/
         target: /tmp/dc
+  ug-intersectionsgraph:
+    build:
+      context: ../..
+      dockerfile: ./devsecops/local/ug-intersectionsgraph/Dockerfile
+    depends_on:
+      ug-osmpostprocess:
+        condition: service_completed_successfully
+    container_name: ug-intersectionsgraph
+    env_file:
+      - ./ug-intersectionsgraph/env/root.env
+      - ./ug-intersectionsgraph/env/read.env
+    image: ug-intersectionsgraph
+    networks:
+      - ug-public
+    volumes:
+      - type: bind
+        source: ../../services/intersections/data/
+        target: /usr/src/app/data/
+  ug-intersections_xsect:
+    build:
+      context: ../..
+      dockerfile: ./devsecops/local/ug-intersections_xsect/Dockerfile
+    depends_on:
+      ug-osm2pgsql:
+        condition: service_completed_successfully
+    container_name: ug-intersections_xsect
+    env_file:
+      - ./ug-intersectionsgraph/env/root.env
+      - ./ug-intersectionsgraph/env/read.env
+    image: ug-intersections_xsect
+    networks:
+      - ug-public
+  ug-osmpostprocess:
+    build:
+      context: ../..
+      dockerfile: ./devsecops/local/ug-osmpostprocess/Dockerfile
+    depends_on:
+      ug-osm2pgsql:
+        condition: service_completed_successfully
+    container_name: ug-osmpostprocess
+    env_file:
+      - ./ug-osm2pgsql/env/root.env
+    image: ug-osmpostprocess
+    networks:
+      - ug-public
 
 networks:
   ug-public:

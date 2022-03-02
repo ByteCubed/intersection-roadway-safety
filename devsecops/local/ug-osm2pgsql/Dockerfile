@@ -10,4 +10,4 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update
 RUN apt-get -y install osm2pgsql
 
-CMD sleep 10 && osm2pgsql -H $HOSTNAME -U $POSTGRES_USER -d $POSTGRES_DB -s -S ./tmp/osm/default.style ./tmp/osm/district-of-columbia-latest.osm.pbf
+CMD sleep 10 && osm2pgsql --number-process=4 -H $HOSTNAME -U $POSTGRES_USER -d $POSTGRES_DB -s -S ./tmp/osm/default.style ./tmp/osm/district-of-columbia-latest.osm.pbf

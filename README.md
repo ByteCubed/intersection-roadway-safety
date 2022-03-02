@@ -2,6 +2,10 @@
 
 This repository contains services for instantiating Roadway Safety services. It contains application data, data, and deployment code for key services. The project's microservices architecture allows services to be captured in separate folders and will be independently deployable, both locally and in the cloud. For a complete overview, see the [documentation](documentation) folder's [technical overview](technical_overview.docx).
 
+## Requirements:
+
+Be sure you are using at least docker compose version 2+, and docker enginer version 20.
+
 ![](documentation/overview.png)
 
 If you have trouble reading this document, paste its contents into an online Markdown editor like [Dillinger](https://www.dillinger.io/).
