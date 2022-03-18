@@ -18,17 +18,25 @@ CURRENT_DIR = 'services/intersections'
 #@click.argument('intersection_file')
 #@click.argument('place')
 def load_intersections(intersection_file, place):
+    schema_name = "public"
+    table_name = "planet_osm_intersections_alpha"
     # Connect to your postgres DB
     conn = psycopg2.connect(f"host={HOST_NAME} dbname={POSTGRES_DB} user={POSTGRES_USER} password={POSTGRES_PASSWORD} port=5432")
 
     # Open a cursor to perform database operations
     cur = conn.cursor()
+    # cur.execute(f"""SELECT EXISTS (
+    #                 SELECT FROM pg_tables
+    #                 WHERE  schemaname = '{schema_name}'
+    #                 AND    tablename  = '{table_name}'
+    #             );""")
+    # table_exists = cur.fetchone()[0]
 
-    cur.execute("""CREATE TABLE IF NOT EXISTS rws.public.planet_osm_intersections_alpha
+    cur.execute(f"""CREATE TABLE IF NOT EXISTS rws.{schema_name}.{table_name}
     (
-    longitude TEXT
+    nodehash TEXT
+    ,longitude TEXT
     ,latitude TEXT
-    ,nodeid TEXT
     ,num_legs TEXT
     ,geometry_type TEXT
     ,geometry TEXT
@@ -40,6 +48,8 @@ def load_intersections(intersection_file, place):
     ,point geometry(point,3857)
     ,maskimage TEXT
     ,satimage TEXT
+    ,node_id int8
+    , primary key (nodehash)
     )""")
 
     cur.execute("""CREATE INDEX IF NOT EXISTS planet_osm_intersection_index ON
@@ -50,9 +60,9 @@ def load_intersections(intersection_file, place):
     for xsect in xsections['features']:
         names = "|".join(xsect['properties']['names']).replace('"', "").replace("'", "")
         cur.execute(f"""INSERT INTO rws.public.planet_osm_intersections_alpha VALUES \
-                    ('{xsect['properties']['longitude']}',\
+                    ('{xsect['properties']['nodeid']}',\
+                    '{xsect['properties']['longitude']}',\
                     '{xsect['properties']['latitude']}',\
-                    '{xsect['properties']['nodeid']}',\
                     '{xsect['properties']['num_legs']}',\
                     '{xsect['properties']['geometry_type']}',\
                     '{xsect['properties']['geometry']}',\
@@ -65,8 +75,20 @@ def load_intersections(intersection_file, place):
                          {xsect['properties']['latitude']}), 4326),3857),\
                     '{CURRENT_DIR}/data/{stringcase.alphanumcase(place)}_masks/mask_{xsect['properties']['nodeid']}.png',\
                     '{CURRENT_DIR}/data/{stringcase.alphanumcase(place)}_satimgs/satimg_{xsect['properties']['nodeid']}.png'\
-                );""")
+                ) on conflict do nothing;""")
 
+    cur.execute(f"""update planet_osm_intersections_alpha poia2 
+                        set node_id = subquery.node_id
+                        from (
+                            select poia.nodehash, n.node_id
+                            from planet_osm_intersections_alpha poia 
+                            join node n on ST_DWITHIN(poia.point, n.point3857, 5)
+                                where ST_Distance(poia.point, n.point3857) = 
+                                (select MIN(ST_Distance(poia.point, subnode.point3857)) 
+                                from node subnode 
+                                where ST_DWITHIN(poia.point, subnode.point3857, 5))
+                        ) subquery 
+                        where subquery.nodehash = poia2.nodehash and poia2.node_id is null;""")
     conn.commit()
 
     return 0

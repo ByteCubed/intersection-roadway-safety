@@ -9,7 +9,8 @@ CREATE TABLE if not exists public.node (
 	point3857 geometry NULL,
 	point4326 geometry NULL,
 	lat_int int4 NULL,
-	long_int int4 NULL
+	long_int int4 NULL,
+	on_road bool NULL
 );
 
 

@@ -50,7 +50,7 @@ def calculate_total_num_legs(crop_size):
     # Open a cursor to perform database operations
     cur = conn.cursor()
 
-    cur.execute("select longitude, latitude, ST_AsText(point),nodeid,maskimage from planet_osm_intersections_alpha;")
+    cur.execute("select longitude, latitude, ST_AsText(point),nodehash,maskimage from planet_osm_intersections_alpha;")
     nodes = cur.fetchall()
     print(nodes)
     cur.execute("ALTER TABLE planet_osm_intersections_alpha ADD COLUMN IF NOT EXISTS num_legs_from_borderAlgo text ;")
@@ -86,10 +86,11 @@ def calculate_total_num_legs(crop_size):
             print("num legs = " + str(num_legs))
             cur.execute(f""" UPDATE planet_osm_intersections_alpha
                     SET num_legs_from_borderAlgo = {num_legs}
-                    WHERE nodeid = '{node[3]}'""")
+                    WHERE nodehash = '{node[3]}'""")
 
         except Exception as e:
-            print(e)
+            pass
+            # print(e)
 
         # if count > 12000:
         #     break

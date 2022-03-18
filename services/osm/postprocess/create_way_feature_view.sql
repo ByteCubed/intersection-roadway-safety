@@ -908,3 +908,6 @@ array_to_string(array_agg(case when wf.feature='year_of_construction' then wf.va
 array_to_string(array_agg(case when wf.feature='zoo' then wf.value else null end), ', ', null) as zoo --24 values total
 from way_feature wf
 group by wf.way_id;
+
+CREATE INDEX if not exists way_feature_view_index ON way_feature_view(way_id);
+

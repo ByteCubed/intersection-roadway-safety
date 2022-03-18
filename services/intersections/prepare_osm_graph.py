@@ -73,6 +73,7 @@ ox.utils.config(
     useful_tags_node=node_tags
 )
 
+
 #@click.command()
 #@click.argument('location', type=str)
 def get_osm_graph(location: str):

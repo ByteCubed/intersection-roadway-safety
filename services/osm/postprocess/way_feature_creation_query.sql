@@ -18,3 +18,6 @@ from (select id, tags, generate_subscripts(tags, 1) as s from public.planet_osm_
 left outer join way_feature wf on wf.way_id = foo.id and wf.feature = foo.tags[s-1] and wf.value = foo.tags[s]
 where s%2 = 0 and wf.way_feature_id is null
 ON conflict do nothing;
+
+create index if not exists way_feature_id_index on way_feature(way_id);
+

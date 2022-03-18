@@ -39,38 +39,27 @@ services:
       - type: bind
         source: ../../data/dc/
         target: /tmp/dc
-  ug-intersectionsgraph:
+      - type: bind
+        source: ../../data/trafficvolume/
+        target: /tmp/trafficvolume
+  ug-satimages:
     build:
       context: ../..
-      dockerfile: ./devsecops/local/ug-intersectionsgraph/Dockerfile
+      dockerfile: ./devsecops/local/ug-satimages/Dockerfile
     depends_on:
       ug-osmpostprocess:
         condition: service_completed_successfully
-    container_name: ug-intersectionsgraph
+    container_name: ug-satimages
     env_file:
-      - ./ug-intersectionsgraph/env/root.env
-      - ./ug-intersectionsgraph/env/read.env
-    image: ug-intersectionsgraph
+      - ./ug-satimages/env/root.env
+      - ./ug-satimages/env/read.env
+    image: ug-satimages
     networks:
       - ug-public
     volumes:
       - type: bind
-        source: ../../services/intersections/data/
+        source: ../../services/generate_satimages_masks/data/
         target: /usr/src/app/data/
-  ug-intersections_xsect:
-    build:
-      context: ../..
-      dockerfile: ./devsecops/local/ug-intersections_xsect/Dockerfile
-    depends_on:
-      ug-osm2pgsql:
-        condition: service_completed_successfully
-    container_name: ug-intersections_xsect
-    env_file:
-      - ./ug-intersectionsgraph/env/root.env
-      - ./ug-intersectionsgraph/env/read.env
-    image: ug-intersections_xsect
-    networks:
-      - ug-public
   ug-osmpostprocess:
     build:
       context: ../..

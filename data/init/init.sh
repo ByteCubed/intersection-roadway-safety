@@ -2,6 +2,8 @@ psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE EXTENSION hstore"
 
 psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/sql/dc.sql
 psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/sql/mire.sql
+psql -U $POSTGRES_USER -d $POSTGRES_DB -f /docker-entrypoint-initdb.d/sql/intersect_angle.sql
+ogr2ogr -f "PostgreSQL" PG:"dbname=$POSTGRES_DB user=$POSTGRES_USER" "/tmp/trafficvolume/2018_Traffic_Volume.geojson" -nln traffic_volume_raw -append
 
 mkfifo /tmp/omyfifo
 zcat /tmp/dc/Crashes_in_DC.csv.zip > /tmp/omyfifo &
@@ -23,4 +25,4 @@ psql -U $POSTGRES_USER -d $POSTGRES_DB -c "ALTER DEFAULT PRIVILEGES IN SCHEMA mi
 psql -U $POSTGRES_USER -d $POSTGRES_DB -c "ALTER DEFAULT PRIVILEGES IN SCHEMA mire GRANT EXECUTE ON FUNCTIONS TO ${POSTGRES_USER_READ_ONLY}"
 
 psql -U $POSTGRES_USER -d $POSTGRES_DB -c "select *,  ST_Transform(ST_SetSRID(ST_MakePoint(cast(longitude as float),cast(latitude as float)), 4326),3857) as point into crashes.dc_indexed from rws.crashes.dc"
-psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE INDEX IF NOT EXISTS crashes.dc_indexed ON rws.crashes.dc_indexed USING gist(point)"
+psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE INDEX IF NOT EXISTS dc_indexed ON rws.crashes.dc_indexed USING gist(point)"
