@@ -1,29 +1,12 @@
-version: '3'
+version: '2'
 services:
-  ug-osm2pgsql:
-    build:
-      context: ../..
-      dockerfile: ./devsecops/local/ug-osm2pgsql/Dockerfile
-    container_name: ug-osm2pgsql
-    depends_on:
-      - 'ug-postgresql'
-    env_file:
-      - ./ug-osm2pgsql/env/root.env
-    image: ug-osm2pgsql
-    networks:
-      - ug-public
-    volumes:
-      - type: bind
-        source: ../../data/osm/
-        target: /tmp/osm
   ug-postgresql:
     build:
       context: ../..
       dockerfile: ./devsecops/local/ug-postgresql/Dockerfile
     container_name: ug-postgresql
     env_file:
-      - ./ug-postgresql/env/root.env
-      - ./ug-postgresql/env/read.env
+      - ./env/db_root_user.env
     image: ug-postgresql
     networks:
       - ug-public
@@ -34,25 +17,50 @@ services:
       - ug-postgresql:/var/lib/postgresql/data
       # Use this option to make data available to the local filesystem.
       - type: bind
-        source: ../../data/mire/
-        target: /tmp/mire
+        source: ./ug-postgresql/mire/
+        target: /data/mire/
       - type: bind
-        source: ../../data/dc/
-        target: /tmp/dc
+        source: ./ug-postgresql/init/
+        target: /init/
+  ug-populate-region:
+    build:
+      context: ../..
+      dockerfile: ./devsecops/local/ug-populate-region/Dockerfile
+    command: './wait-for -t 0 ug-postgresql:5432 -- ./init.sh'
+    container_name: ug-populate-region
+    env_file:
+      - ./env/db_builder.env
+    image: ug-populate-region
+    networks:
+      - ug-public
+    volumes:
+      # Use this option to make data available to the local filesystem.
       - type: bind
-        source: ../../data/trafficvolume/
-        target: /tmp/trafficvolume
+        source: ../../data/
+        target: /data/
+  ug-osm2pgsql:
+    build:
+      context: ../..
+      dockerfile: ./devsecops/local/ug-osm2pgsql/Dockerfile
+    container_name: ug-osm2pgsql
+    command: './wait-for -t 0 ug-postgresql:5432 -- ./init.sh'
+    env_file:
+      - ./env/db_builder.env
+    image: ug-osm2pgsql
+    networks:
+      - ug-public
+    volumes:
+      - type: bind
+        source: ../../data/
+        target: /data/
   ug-satimages:
     build:
       context: ../..
       dockerfile: ./devsecops/local/ug-satimages/Dockerfile
-    depends_on:
-      ug-osmpostprocess:
-        condition: service_completed_successfully
+    command: './wait-for -t 0 ug-postgresql:5432 -- python -u ./satimages/generate_intersection_masks.py'
     container_name: ug-satimages
     env_file:
-      - ./ug-satimages/env/root.env
-      - ./ug-satimages/env/read.env
+      - ./env/mapbox.env
     image: ug-satimages
     networks:
       - ug-public
@@ -60,19 +68,6 @@ services:
       - type: bind
         source: ../../services/generate_satimages_masks/data/
         target: /usr/src/app/data/
-  ug-osmpostprocess:
-    build:
-      context: ../..
-      dockerfile: ./devsecops/local/ug-osmpostprocess/Dockerfile
-    depends_on:
-      ug-osm2pgsql:
-        condition: service_completed_successfully
-    container_name: ug-osmpostprocess
-    env_file:
-      - ./ug-osm2pgsql/env/root.env
-    image: ug-osmpostprocess
-    networks:
-      - ug-public
 
 networks:
   ug-public:

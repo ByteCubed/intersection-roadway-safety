@@ -6,11 +6,11 @@ MAINTAINER U.Group
 
 WORKDIR /usr/src/app
 
+RUN apt-get -q update && apt-get -qy install netcat
+
 COPY ./devsecops/local/ug-satimages/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY ./devsecops/wait-for ./
 COPY services/generate_satimages_masks/*.py ./satimages/
-COPY services/generate_satimages_masks/.env ./satimages/
 COPY services/generate_satimages_masks/dot/ ./satimages/dot/
-
-CMD python ./satimages/generate_intersection_masks.py "District of Columbia", "dc_intersections.json", "100"

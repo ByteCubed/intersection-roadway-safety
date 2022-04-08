@@ -4,7 +4,7 @@ This repository contains services for instantiating Roadway Safety services. It 
 
 ## Requirements:
 
-Be sure you are using at least docker compose version 2+, and docker enginer version 20.
+Be sure you are using at least docker compose version 2+, and docker engineer version 20.
 
 ![](documentation/overview.png)
 
@@ -45,7 +45,20 @@ To stop the services in this template:
     ```
     * NOTE: The `-v` flag will remove all persistent data.
 
-## Section 3: TODOs (Incomplete)
+## Section 3: Adding a New Region
+
+1. Create a new subfolder under data by copying the template folder. Rename this folder to the region you wish to ingest.
+2. The region folder should have 5 subfolders: aadt, crashes, osm, postprocess, and preingest.
+3. Drag and drop your data into the corresponding folder (traffic volume into aadt, osm data into osm, etc.)
+   3.1. Currently only geojson and csv are supported for aadt and crashes.
+   3.2. You can customize ingestion by adding a bash script in the appropriate folder to run instead of normal ingestion.
+4. If there are any sql prerequisites (such as creating a table to house the data) that should be run before ingestion, add them to the preingest folder.
+5. If there is any sql postprocessing (such as renaming headers or creating indices) that should be run after ingestion, add them to the preingest folder. 
+   5.1. Note that OSM ingestion is run in a separate process after crashes and aadt are ingested, and the "postprocess" scripts in the data folder will thus be run *before* the osm data is ingested.
+
+To disable a region, update the ignore.txt file under the data folder. Add a new line matching the pattern "/data/{region_name}/". These regions will be skipped during ingestion.
+
+## Section 4: TODOs (Incomplete)
 
 1. Standardize OSM devsecops practices, including deployment documentation.
 2. Incorporate Logstash to accelerate data pipelines.

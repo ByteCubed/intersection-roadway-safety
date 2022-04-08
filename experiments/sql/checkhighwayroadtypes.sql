@@ -1,0 +1,1 @@
+select w.highway_type, count(1) from way w where w.is_road group by w.highway_type order by count(1) desc;
