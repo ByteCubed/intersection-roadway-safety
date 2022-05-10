@@ -468,13 +468,36 @@ class SlippyMap:
     Note that this also encapsulates OSM functionality, which should probably be another
     class inheriting from SlippyMap.
     """
-    def __init__(self, zoom, place=None, token=None):
+    def __init__(self, zoom, place=None, bbox=[], token=None):
         self.zoom = int(zoom)
-
+        #ox.config(log_console=True)
         if place is not None:
+            print(f"Place: {place}")
             # query to get initial map
             self._graph = ox.graph_from_place(
                 place,
+                simplify=False,
+                retain_all=True,
+                truncate_by_edge=True,
+                # clean_periphery=False,
+                clean_periphery=True,
+                network_type="drive_service"
+            )
+
+            # get nodes, edges, and spatial index
+            self._gdf_nodes, self._gdf_edges = ox.utils_graph.graph_to_gdfs(self._graph)
+            self._node_sindex = self._gdf_nodes.sindex
+            self._edge_sindex = self._gdf_edges.sindex
+        elif len(bbox) >= 4:
+            height = (bbox[0]-bbox[1])/2
+            length = (bbox[2]-bbox[3])/2
+            print(f"Center Point: {bbox[1] + height}, {bbox[3] + length} and height/length: {height}, {length}")
+            # query to get initial map
+            self._graph = ox.graph_from_bbox(
+                north=bbox[0],
+                south=bbox[1],
+                east=bbox[2],
+                west=bbox[3],
                 simplify=False,
                 retain_all=True,
                 truncate_by_edge=True,
