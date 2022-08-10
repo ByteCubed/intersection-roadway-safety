@@ -1,0 +1,4 @@
+outs:
+- md5: 6dccf8b944d45b3666ae397c9a1cedb2
+  size: 4264200
+  path: encoded_masks.json

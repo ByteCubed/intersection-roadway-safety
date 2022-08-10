@@ -139,3 +139,5 @@ cython_debug/
 
 # Service
 /data/ug-postgresql/volume
+/data
+/services/generate_satimages_masks/data/

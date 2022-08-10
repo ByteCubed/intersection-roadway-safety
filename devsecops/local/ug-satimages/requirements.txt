@@ -13,3 +13,6 @@ matplotlib
 requests
 requests-cache
 osmnx
+boto3
+botocore
+pillow

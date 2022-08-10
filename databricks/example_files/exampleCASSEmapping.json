@@ -1,0 +1,116 @@
+{
+  "dot": {
+    "mappings": {
+      "_meta": {
+        "created_by": "file-data-visualizer"
+      },
+      "properties": {
+        "associatedwayscount": {
+          "type": "keyword"
+        },
+        "bikepaths": {
+          "type": "keyword"
+        },
+        "footways": {
+          "type": "keyword"
+        },
+        "highway_types": {
+          "type": "keyword"
+        },
+        "includes_bikepath": {
+          "type": "boolean"
+        },
+        "includes_footway": {
+          "type": "boolean"
+        },
+        "includes_railway": {
+          "type": "boolean"
+        },
+        "includes_road": {
+          "type": "boolean"
+        },
+        "junction_geometry_type_id": {
+          "type": "long"
+        },
+        "junction_type_id": {
+          "type": "long"
+        },
+        "junction_type_list": {
+          "type": "keyword"
+        },
+        "lanes": {
+          "type": "keyword"
+        },
+        "latitude": {
+          "type": "double"
+        },
+        "legs": {
+          "type": "long"
+        },
+        "lit": {
+          "type": "keyword"
+        },
+        "location": {
+          "type": "geo_point"
+        },
+        "longitude": {
+          "type": "double"
+        },
+        "maxspeed": {
+          "type": "keyword"
+        },
+        "min_angle": {
+          "type": "long"
+        },
+        "minspeed": {
+          "type": "keyword"
+        },
+        "most_common_highway_type": {
+          "type": "keyword"
+        },
+        "node_id": {
+          "type": "long"
+        },
+        "nonramp_roads": {
+          "type": "long"
+        },
+        "oneways": {
+          "type": "long"
+        },
+        "point3857": {
+          "type": "geo_point"
+        },
+        "rails": {
+          "type": "long"
+        },
+        "ramp_roads": {
+          "type": "long"
+        },
+        "satimage_url": {
+          "type": "keyword"
+        },
+        "second_min_angle": {
+          "type": "long"
+        },
+        "sidewalk_count": {
+          "type": "long"
+        },
+        "surface_types": {
+          "type": "keyword"
+        },
+        "total_known_lanes": {
+          "type": "long"
+        },
+        "tunnel": {
+          "type": "long"
+        },
+        "tunneltypes": {
+          "type": "keyword"
+        },
+        "way_ids": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

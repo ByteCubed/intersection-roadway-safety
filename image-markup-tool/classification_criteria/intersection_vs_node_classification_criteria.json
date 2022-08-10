@@ -1,0 +1,12 @@
+{
+    "criteria": [
+        {
+            "name": "Is this an Intersection or a Node?",
+            "value_mapping": {
+                "1": "Intersection",
+                "2": "Node",
+                "3": "Unsure"
+            }
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "criteria": [
+        {
+            "name": "Intersection Legs"
+        },
+        {
+            "name": "Junction Type",
+            "value_mapping": {
+              "1": "Roadway/roadway (not interchange related)",
+              "2": "Roadway/roadway (interchange ramp terminal)",
+              "3": "Roadway/pedestrian crossing",
+              "4": "Roadway/bicycle path or trail",
+              "5": "Roadway/railroad grade crossing",
+              "6": "Other"
+            }
+        },
+        {
+            "name": "Junction Geometry Type",
+            "value_mapping": {
+              "1": "T-Intersection",
+              "2": "Y-Intersection",
+              "3": "Cross Intersection",
+              "4": "5 or more legs and not circular",
+              "5": "Roundabout",
+              "6": "Other Circular Intersection including rotaries and neighborhood traffic circles",
+              "7": "Midblock Pedestrian Crossing",
+              "8": "Restricted Crossing U-turn intersection",
+              "9": "Median U-turn intersection",
+              "10": "Displaced left-turn intersection",
+              "11": "Jughandle intersection",
+              "12": "Continuous green T intersection",
+              "13": "Quadrant intersection",
+              "14": "Other"
+            }
+        }
+    ]
+}

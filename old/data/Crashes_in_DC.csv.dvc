@@ -1,9 +1,0 @@
-md5: 3083533a67ee48993dc357217fb92547
-frozen: true
-deps:
-- etag: 2912525f635211baf1e8c1cba0002b01-8
-  path: s3://dot-roadway-safety/Crashes_in_DC.csv
-  size: 120915615
-outs:
-- md5: 5b8a13ebab5db490d9e1562b4a134578
-  path: Crashes_in_DC.csv

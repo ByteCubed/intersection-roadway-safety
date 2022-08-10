@@ -4,17 +4,20 @@ Need to keep intersection IDs...
 process intersections json file
 """
 
-from itertools import count
 import json
 from os.path import exists
 
-import click
+import boto3
+import botocore
+
 import psycopg2
 import time
 import os
 from tqdm import tqdm
 from skimage.io import imsave
 from dot.tiles import SlippyMap
+from PIL import Image
+import io
 from dot.tiles import draw_square_at_proportion, draw_square_at_pixel, get_cropped_centered_img
 import stringcase
 from pathlib import Path
@@ -58,6 +61,17 @@ cur = None
 # the size in lat/long degrees for tiles
 x_step = 0.2
 y_step = 0.5 * x_step
+
+
+# AWS fields
+access_key_id = os.getenv('AWS_ACCESS_KEY_ID')
+secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+session = None
+bucket_name = 'ib-dot-roadway-safety'
+sat_data_prefix = 'satellite_data/'
+sat_image_prefix = sat_data_prefix + 'sat_imgs/'
+USE_CLOUD = False
+CLIENT = boto3.client('s3', region_name='us-east-1', aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
 
 state_dict = {
     'AL': 'Alabama, United States',
@@ -172,6 +186,14 @@ state_dict = {
     'WYOMING': 'Wyoming, United States'
 }
 
+
+def upload_raw_to_s3(imdata, filename, folder):
+    CLIENT.put_object(Body=imdata, Bucket=bucket_name, Key=folder + filename)
+
+
+def upload_to_s3_from_local_file(filepath, filename, folder):
+    CLIENT.upload_file(filepath + filename, bucket_name, folder + filename)
+
 def connect():
     global conn
     global cur
@@ -201,16 +223,127 @@ def check_schema_ready():
     return region
 
 
+def get_nodes_and_intersections(region, limit):
+    """
+    Quick experimental comparison between OSM nodes and intersections
+    Parameters
+    ----------
+    region - the target region
+    limit - the total number of records returned. Half are ODDC, half OSM
+
+    Returns
+    -------
+    The two jsons into which the data is loaded, corresponding to intersections and non-intersection nodes.
+    """
+    node_json = f'{region}_nodes.json'
+    intersection_json = f'{region}_intersections.json'
+    node_query = f"""select
+                            n.node_id,
+                            lat_int::float / 10000000 as lat,
+                            long_int::float / 10000000 as long
+                    from
+                            {region}.node n
+                    left join {region}.node_intersections ni on
+                            n.node_id = ni.node_id
+                    where
+                        on_road
+                        and ni.node_id is null
+                    order by
+                        random()
+                    limit {limit};"""
+    cur.execute(node_query)
+    save_json(node_json, cur.fetchall())
+
+    intersection_query = f"""select
+                            n.node_id,
+                            lat_int::float / 10000000 as lat,
+                            long_int::float / 10000000 as long
+                    from
+                            {region}.node n
+                    left join {region}.node_intersections ni on
+                            n.node_id = ni.node_id
+                    where
+                        on_road
+                        and ni.node_id is null
+                    order by
+                        random()
+                    limit {limit};"""
+    cur.execute(intersection_query)
+    save_json(intersection_json, cur.fetchall())
+
+    return node_json, intersection_json
+
+
+
+def compare_with_open_data_dc(oddc_source, region, radius, limit):
+    """
+    Quick experimental comparison between Open Data DC ("ODDC") and OSM data
+    Parameters
+    ----------
+    oddc_source - the schema + tablename for the ODDC data
+    region - the target region
+    radius - the maximum distance at which we consider two candidate intersections to be the same
+    limit - the total number of records returned. Half are ODDC, half OSM
+
+    Returns
+    -------
+    The two jsons into which the data is loaded.
+    """
+    oddc_out_json = f'oddc_vs_{region}.json'
+    region_out_json = f'{region}_vs_oddc.json'
+    query = f"""select
+        min(ogc_fid) as ogc_fid,
+        latitude, longitude, oddc_point3857
+    from
+        (select
+            st_transform(st_setsrid(odi.wkb_geometry, 4326), 3857) as oddc_point3857,
+            *
+        from
+            {oddc_source} odi) oddcsq
+            left join {region}.{intersection_table_name} if2 on ST_DWITHIN(if2.point3857, oddcsq.oddc_point3857, {radius})
+        where node_id is null
+    group by latitude, longitude, oddc_point3857
+    order by random()
+    limit {limit};"""
+    cur.execute(query)
+    save_json(oddc_out_json, cur.fetchall())
+
+    query = f"""select
+        ni.node_id,
+        lat, long
+    from
+        (select
+            st_transform(st_setsrid(odi.wkb_geometry, 4326), 3857) as oddc_point3857, ogc_fid
+        from
+            {oddc_source} odi) oddcsq
+            right join {region}.{intersection_table_name} ni on ST_DWITHIN(ni.point3857, oddcsq.oddc_point3857, {radius})
+		    join {region}.intersection_features if2 on ni.node_id = if2.node_id
+        where ogc_fid is null
+		    and if2.nonramp_roads + if2.ramp_roads > 2
+    order by random()
+    limit {limit};"""
+    cur.execute(query)
+    save_json(region_out_json, cur.fetchall())
+
+    return oddc_out_json, region_out_json
+
+
+
+
 def load_intersections_from_db(out_file, schema_name, limit=0, offset=0):
     query = f"""select node_id, lat as latitude, 
                                 long as longitude from {schema_name}.{intersection_table_name} order by node_id"""
     if limit is not None and limit > 0:
         query = query + f""" limit {limit} offset {offset};"""
     cur.execute(query)
-    save_json(out_file, cur.fetchall())
+    data = cur.fetchall()
+    if out_file is not None:
+        save_json(out_file, data, prefix=sat_data_prefix)
+    return data
 
 
-def load_intersections_from_db_for_tile(bbox, out_file, schema_name, limit=0, offset=0):
+
+def load_intersections_from_db_for_tile(bbox, schema_name, limit=0, offset=0, out_file=None):
     query = (f"""select node_id, lat as latitude, 
                     long as longitude from {schema_name}.{intersection_table_name} 
                     where 
@@ -227,7 +360,11 @@ def load_intersections_from_db_for_tile(bbox, out_file, schema_name, limit=0, of
     if limit is not None and limit > 0:
         query = query + f""" limit {limit} offset {offset};"""
     cur.execute(query)
-    save_json(out_file, cur.fetchall())
+    data = cur.fetchall()
+    if out_file is not None:
+        save_json(out_file, data, prefix=sat_data_prefix)
+    return data
+
 
 
 def get_intersection_count_within_area(schema_name, bbox):
@@ -347,18 +484,72 @@ def get_unworked_tile(region_name):
         counter = counter + 1
 
 
-def save_json(filename, data, indent=4):
-    with open(filename, 'w+') as f:
-        f.write(json.dumps(data, indent=indent))
+def all_tiles_complete(region):
+    """
+    Checks if all tiles have been fully worked.
+    Parameters
+    ----------
+    region - the region to check. Should match a key in REGION_TILES
+
+    Returns
+    -------
+    True if all tiles are complete, false otherwise.
+    """
+    tiles = REGION_TILES[region]
+    for tile in range(len(tiles)):
+        if tiles[tile][OFFSET_NAME] < tiles[tile][TOTAL_WORK_NAME]:
+            return False
+    return True
 
 
-def load_json(filename):
-    with open(filename, 'r') as f:
-        data = json.loads(f.read())
+def save_json(filepath, data, use_s3=USE_CLOUD, prefix='', indent=4):
+    if use_s3:
+        CLIENT.put_object(Body=json.dumps(data, indent=indent), Bucket=bucket_name, Key=prefix + filepath)
+    else:
+        with open(Path(filepath), 'w+') as f:
+            f.write(json.dumps(data, indent=indent))
+
+
+def load_json(filepath, use_s3=USE_CLOUD, prefix=''):
+    if use_s3:
+        response = CLIENT.get_object(Bucket=bucket_name, Key=prefix + filepath)
+        data = json.loads(response['Body'].read())
+    else:
+        with open(Path(filepath), 'r') as f:
+            data = json.loads(f.read())
     return data
 
 
-def download_intersection_images(slippy_map, img_path, intersection_file, limit, offset=0):
+def file_exists(file, prefix=''):
+    """
+    Checks that a file exists
+    Parameters
+    ----------
+    file - the filename
+    prefix - an optional prefix for use on s3
+
+    Returns
+    -------
+    -------
+    True if the file exists, False otherwise.
+    """
+    if USE_CLOUD:
+        try:
+            CLIENT.head_object(Bucket=bucket_name, Key=prefix + file)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                # The object does not exist.
+                return False
+            else:
+                # Something else has gone wrong.
+                raise
+        else:
+            return True
+    else:
+        return Path(file).is_file()
+
+
+def download_intersection_images(slippy_map, img_path, data, limit=-1, offset=0, custom_data_label_mapping=[0,1,2], prefix='satimg'):
     """
 
     Parameters
@@ -368,6 +559,10 @@ def download_intersection_images(slippy_map, img_path, intersection_file, limit,
     intersection_file - the path to the file containing the data to find images for
     limit - the number of records to try to process
     offset - the number of initial data rows to skip
+    custom_data_label_mapping - a 3-length array. The first value corresponds to the node_id index (or, if a dict is used, the key.
+                                The second value corresponds to latitude, the third to longitude
+    prefix - the output files' prefix
+
 
     Returns
     -------
@@ -379,11 +574,9 @@ def download_intersection_images(slippy_map, img_path, intersection_file, limit,
     if not os.path.isdir(f'{img_path}_satimgs'):
         os.mkdir(f'{img_path}_satimgs')
 
-    data = load_json(intersection_file)
-
     error_nodes = []
-    if exists(f'{img_path}_error.json'):
-        error_nodes = load_json(f'{img_path}_error.json')
+    if file_exists(f'{img_path}_error.json', prefix=sat_image_prefix):
+        error_nodes = load_json(f'{img_path}_error.json', prefix=sat_data_prefix)
 
     new_errors = 0
     skipped = 0
@@ -391,12 +584,13 @@ def download_intersection_images(slippy_map, img_path, intersection_file, limit,
     for index in tqdm(range(offset, len(data))):
         row = data[index]
 
-        node_id = row[0]
-        latitude = row[1]
-        longitude = row[2]
+        node_id = row[custom_data_label_mapping[0]]
+        latitude = row[custom_data_label_mapping[1]]
+        longitude = row[custom_data_label_mapping[2]]
 
         # If the masks and images already exist, don't waste our 50k
-        if os.path.exists(f'{img_path}_satimgs/satimg_{node_id}.png'):
+        if os.path.exists(f'{img_path}_satimgs/{prefix}_{node_id}.png'):
+
             print(f"Files already exist for {node_id}, skipping...")
             skipped += 1
             continue
@@ -404,11 +598,20 @@ def download_intersection_images(slippy_map, img_path, intersection_file, limit,
         box = slippy_map @ (longitude, latitude)
 
         try:
-            imsave(f'{img_path}_satimgs/satimg_{node_id}.png', box.image)
-        except:
+            if USE_CLOUD:
+                imdata = io.BytesIO() # prepare byte stream
+                Image.fromarray(box.image).convert('RGB').save(imdata, format='png')
+                imdata.seek(0)
+                upload_raw_to_s3(imdata, f'satimg_{node_id}.png', sat_image_prefix + os.path.basename(img_path) + '/')
+            else:
+                # If not using cloud, save locally
+                imsave(f'{img_path}_satimgs/satimg_{node_id}.png', box.image)
+        except Exception as error:
             error_nodes.append(node_id)
             new_errors = new_errors + 1
             print(f'Failed to generate image for {node_id}, skipping')
+            print(error)
+
             continue
         # try:
         #     imsave(f'{img_path}_masks/mask_{node_id}.png', box.figure_ground)
@@ -424,7 +627,8 @@ def download_intersection_images(slippy_map, img_path, intersection_file, limit,
             counter += 1
 
     if len(error_nodes) > 0:
-        save_json(f'{img_path}_error.json', error_nodes)
+        save_json(f'{img_path}_error.json', error_nodes, prefix=sat_data_prefix)
+
     return counter + new_errors + skipped - 1
 
 
@@ -464,12 +668,22 @@ def determine_region_name(candidate, delim):
 
 def main(limit):
     global REGION_TILES
-    region_tile_file = Path(REGION_TILES_JSON)
-    if not region_tile_file.is_file():
-        region_tile_file.touch(exist_ok=True)
-        save_json(region_tile_file, {})
+    
+    # Create Session With Boto3.
+    global session
+    session = boto3.Session(
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key
+    )
+
+    if not file_exists(REGION_TILES_JSON, prefix=sat_data_prefix):
+        if not USE_CLOUD:
+            Path(REGION_TILES_JSON).touch(exist_ok=True)
+        REGION_TILES = {}
+        save_json(REGION_TILES_JSON, REGION_TILES, prefix=sat_data_prefix)
     else:
-        REGION_TILES = load_json(REGION_TILES_JSON)
+        REGION_TILES = load_json(REGION_TILES_JSON, prefix=sat_data_prefix)
+
 
     while True:
         if are_regions_to_work():
@@ -485,15 +699,22 @@ def main(limit):
                     slippy_map = SlippyMap(zoom=18, token=MAPBOX_TOKEN, bbox=tile_bounds)
 
                     update_region_state(region, SAT_IMAGE_PROCESSING_REGION_STATE)
-                    load_intersections_from_db_for_tile(tile_bounds, json_name, region)
+                    data = load_intersections_from_db_for_tile(tile_bounds, region)
 
                     img_path = f'{os.getcwd()}/data/{stringcase.alphanumcase(region)}'
-                    processed = download_intersection_images(slippy_map, img_path, json_name, limit, offset)
+                    processed = download_intersection_images(slippy_map, img_path, data, limit=limit, offset=offset)
 
                     REGION_TILES[region][tile_num][OFFSET_NAME] = offset + processed
-                    save_json(REGION_TILES_JSON, REGION_TILES)
+                    save_json(REGION_TILES_JSON, REGION_TILES, prefix=sat_data_prefix)
 
-                update_region_state(region, SAT_IMAGE_COMPLETE_REGION_STATE)
+                # If the region is finished (all tiles fully processed), mark it finished.
+                # Otherwise move it back to the end of the previous queue so it can be picked up again.
+                if all_tiles_complete(region):
+                    update_region_state(region, SAT_IMAGE_COMPLETE_REGION_STATE)
+                else:
+                    update_region_state(region, BEGIN_WORKING_REGION_STATE)
+
+
                 conn.close()
         else:
             print("No work yet, sleeping.")
@@ -501,5 +722,72 @@ def main(limit):
             time.sleep(SLEEP_DURATION)
 
 
+def run_on_static_file(region, filename, local_file=False):
+    # Create Session With Boto3.
+    global REGION_TILES
+    global session
+    session = boto3.Session(
+        aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key
+    )
+
+    all_data = load_json(filename, use_s3=not local_file)
+
+    connect()
+    if len(region) > 0:
+        # set names based on region name
+        json_name = region + '.json'
+        area_name = determine_region_name(region.strip().upper(), '_')
+        if area_name is not None:
+
+            if region not in REGION_TILES:
+                REGION_TILES[region] = create_tiles(region, create_region_bbox(region))
+
+            for tile in REGION_TILES[region]:
+                tile_bounds = tile[BBOX_NAME]
+                slippy_map = SlippyMap(zoom=18, token=MAPBOX_TOKEN, bbox=tile_bounds)
+
+                # filters for lat between the N/S bounds and that long is between the E/W bounds
+                data = [x for x in all_data if tile_bounds[1] <= x['latitude'] <= tile_bounds[0]
+                                           and tile_bounds[3] <= x['longitude'] <= tile_bounds[2]]
+
+                img_path = f'{os.getcwd()}/data/{stringcase.alphanumcase(region)}'
+                download_intersection_images(slippy_map, img_path, data, custom_data_label_mapping=['node_id','latitude','longitude'])
+                
+                
+def compare_intersection_data(compare_source_name, region, radius, limit):
+    """
+    Compares OSM data against another source.
+    Parameters
+    ----------
+    compare_source_name - the schema + tablename for the ODDC data
+    region - the target region
+    radius - the maximum distance at which we consider two candidate intersections to be the same
+    limit - the total number of records returned. Half are ODDC, half OSM
+
+    Returns
+    -------
+
+    """
+    dir_name = region + '_compare'
+    connect()
+    bbox = create_region_bbox(region)
+
+    slippy_map = SlippyMap(zoom=18, token=MAPBOX_TOKEN, bbox=bbox)
+    img_path = f'{os.getcwd()}/data/{dir_name}'
+    present_in_comparison_source_but_not_region_db_json, present_in_region_db_but_not_comparison_source_json = compare_with_open_data_dc(compare_source_name, region, radius, limit)
+    download_intersection_images(slippy_map, img_path, present_in_region_db_but_not_comparison_source_json, limit/2, prefix='osm')
+    download_intersection_images(slippy_map, img_path, present_in_comparison_source_but_not_region_db_json, limit/2, prefix='oddc')
+
+    node_json, intersection_json = get_nodes_and_intersections(region, limit)
+    download_intersection_images(slippy_map, img_path + '_nodes', node_json, limit/2, prefix='dc_node')
+    download_intersection_images(slippy_map, img_path + '_intersections', intersection_json, limit/2, prefix='dc_intersection')
+
+
+
 if __name__ == "__main__":
+    #compare_intersection_data('public.opendata_dc_intersections', 'dc', 10, 300)
     main("1000")
+    # run_on_static_file('iowa', './data/intersection_features_iowa.json', local_file=True)
+    #run_on_static_file('dc', './data/intersection_features_dc.json', local_file=True)
+

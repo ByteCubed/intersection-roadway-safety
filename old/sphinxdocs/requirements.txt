@@ -1,4 +1,0 @@
-sphinx
-nbsphinx
-sphinx-autodoc-typehints
-sphinx-rtd-theme

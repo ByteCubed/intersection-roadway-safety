@@ -1,0 +1,40 @@
+
+The model pipeline uses a pandas dataframe with the following columns:
+
+Index(['legs', 'ramp_roads', 'oneways', 'maxspeed', 'minspeed',
+       'surface_types', 'aadt', 'min_angle', 'second_min_angle',
+       'junction_geometry_type_id', 'junction_type_id', 'num_lanes',
+       'highway_type', 'aadt_mean', 'node_density'],
+      dtype='object')
+
+Where each column is further explained below:
+
+legs: float|int , categorical variable
+ramp_roads: float|int , categorical variable
+oneways: float|int , categorical variable
+maxspeed: float , categorical variable
+minspeed: float , categorical variable
+surface_types: string , categorical variable. Must be one of :
+       ['None', 'paved', 'asphalt', 'concrete', 'gravel', 'unpaved',
+       'dirt', 'fine_gravel', 'grass', 'compacted', 'pebblestone',
+       'ground', 'broken_asphalt', 'paving_stones', 'driveway', 'bricks',
+       'gra', 'sand', 'brick', 'mud', 'concrete:plates', 'wood',
+       'crushed_limestone', 'sett', 'earth', 'cement', 'cobblestone',
+       'asphalt_/_gravel', 'none']
+aadt: float , numerical variable
+(second_)min_angle: float|int , numerical variable. Used in degrees.
+junction_geometry_type_id: float , categorical variable. Must be one of: [ 2., nan,  1.,  4.,  7.,  3.,  5.]
+junction_type_id: float , categorical variable. Must be one of:  [1, 2, 5, 3, 4]
+num_lanes: float , numerical variable
+highway_type: string , categorical variable. The most common road type or highest traffic road type going into an intersection. One of:
+       ['residential', 'motorway_link', 'motorway', 'trunk', 'service',
+       'primary', 'secondary', '', 'tertiary', 'track', 'unclassified',
+       'path', 'footway', 'primary_link', 'cycleway', 'razed',
+       'construction', 'secondary_link', 'trunk_link', 'tertiary_link',
+       'living_street', 'proposed', 'planned', 'bridleway', 'road',
+       'pedestrian', 'steps', 'escape']
+aadt_mean: float, numerical variable. Mean aadt of roads within 50m
+node_density: float, numerical variable. Total number of intersections within 50m
+
+
+The target variables is crashes of severity 4 or 5 that involve 2 and only 2 cars within 15m of an intersection.

@@ -1,0 +1,15 @@
+{
+    "criteria": [
+        {
+            "name": "Is this an Intersection?",
+            "value_mapping": {
+                "1": "Intersection",
+                "2": "Two-legged intersection, road bend, or on road but not an intersection",
+                "3": "Aggregate intersection (e.g. center of traffic circle)",
+                "4": "Near an intersection",
+                "5": "Overpass",
+                "6": "Not on a road"
+            }
+        }
+    ]
+}

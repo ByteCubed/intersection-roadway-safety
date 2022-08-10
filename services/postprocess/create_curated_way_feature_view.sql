@@ -55,4 +55,5 @@ create materialized view if not exists curated_way_feature_view as
     join way_node wn on ni.node_id = wn.node_id
     join way_feature_view wfv on wn.way_id = wfv.way_id;
 
-CREATE INDEX curated_way_feature_view_index ON curated_way_feature_view(way_id);
+CREATE INDEX if not exists curated_way_feature_view_index ON curated_way_feature_view(way_id);
+create index if not exists cwfv_node_index on curated_way_feature_view(node_id);

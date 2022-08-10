@@ -1,0 +1,1 @@
+This is the developement tools for training AI models to evaluate satellilite imagery and masks. To utilize, copy a sample of the satellite imagery data that was collected while running the case study location pipeline into a folder train_data. The notebook will allow the training and experimentation of a variaional auto encoder architecture. 

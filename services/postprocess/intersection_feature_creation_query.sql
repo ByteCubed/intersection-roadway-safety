@@ -100,19 +100,28 @@ where subquery.node_id = xf.node_id and subquery.num=1;
 
 update intersection_features xf
 set second_min_angle = angle
-from (select row_number() over (partition by node_id order by node_id, angle) as num, * from intersection_angle) subquery
-where subquery.node_id = xf.node_id and subquery.num=2;
+from
+	(select row_number() over (partition by node_id order by node_id, angle) as num
+		, *
+		from intersection_angle) subquery
+where subquery.node_id = xf.node_id and subquery.num=2; -- identical to the query above save that it's grabbing the second smallest angle
+
 
 -- update geometry type
-update intersection_features if2 set junction_geometry_type_id =
-case
-	 when (select bool_or(junction in ('circular','roundabout')) from curated_way_feature_view cwfv where cwfv.node_id = if2.node_id group by cwfv.node_id) is true then 5 --'Roundabout'
-	 when legs=3 and nonramp_roads = 3 and (min_angle between 70 and 110) and (min_angle + second_min_angle) between 165 and 195 then  1 --'T-intersection'
-	 when legs=3 and nonramp_roads = 3 and not((min_angle between 70 and 110) and (min_angle + second_min_angle) between 165 and 195) then 2 --'Y-intersection'
-	 when legs=4 and nonramp_roads + ramp_roads = 3 and second_min_angle - min_angle  < 20 then 3 --'Cross Intersection'
-	 when legs > 4 and nonramp_roads + ramp_roads > 4 then 4 --'Five or more legs and not circular'
-	 else null end
-where junction_geometry_type_id is null;
+update intersection_features if2 set junction_geometry_type_id = 5
+where (select bool_or(junction in ('circular','roundabout')) from curated_way_feature_view cwfv where cwfv.node_id = if2.node_id group by cwfv.node_id) is true;
+
+update intersection_features if2 set junction_geometry_type_id = 1
+where junction_geometry_type_id is null and (legs=3 and nonramp_roads = 3 and (min_angle between 70 and 110) and (min_angle + second_min_angle) between 165 and 195);
+
+update intersection_features if2 set junction_geometry_type_id = 2
+where  junction_geometry_type_id is null and (legs=3 and nonramp_roads = 3 and not((min_angle between 70 and 110) and (min_angle + second_min_angle) between 165 and 195));
+
+update intersection_features if2 set junction_geometry_type_id = 3
+where  junction_geometry_type_id is null and (legs=4 and nonramp_roads + ramp_roads = 3 and second_min_angle - min_angle  < 20);
+
+update intersection_features if2 set junction_geometry_type_id = 4
+where  junction_geometry_type_id is null and (legs > 4 and nonramp_roads + ramp_roads > 4);
 
 update intersection_features if2 set junction_geometry_type_id = 7 --'Mid-block crossing'
 where nonramp_roads = 2 and footways = 2 and (select count(node_id) from intersection_features if3 where ST_DWITHIN(if3.point3857, if2.point3857, 50) and if3.node_id <> if2.node_id) = 0

@@ -11,3 +11,5 @@ RUN apt-get update &&\
 # NOTE: ".sh" and ".sql" files do not execute if a database already exists.
 COPY devsecops/local/ug-postgresql/init/init.sh  /docker-entrypoint-initdb.d/
 COPY data/us-county-boundaries.geojson  /data/
+COPY data/OpenDataDC_Intersection_Points_for_accuracy_metric.geojson  /data/
+

@@ -1,0 +1,4 @@
+['remote "develop"']
+    url = s3://dot-public/dvc_data/
+['remote "public"']
+    url = s3://dot-public/dvc_data
