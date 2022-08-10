@@ -1,6 +1,6 @@
 # Department of Transportation: Roadway Safety
 
-This repository contains services for instantiating Roadway Safety services. It contains application data, data, and deployment code for key services. The data ingestion, preparation, and curation is split into two separate pipelines, the [case study](#requirements) pipeline and the [nationwide inventory](#US\ Inventory\ pipeline) pipeline.
+This repository contains services for instantiating Roadway Safety services. It contains application data, data, and deployment code for key services. The data ingestion, preparation, and curation is split into two separate pipelines, the [case study](#requirements) pipeline and the [nationwide inventory](/databricks/README.md) pipeline.
 
 ## Visualization
 
